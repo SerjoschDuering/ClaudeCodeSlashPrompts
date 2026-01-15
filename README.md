@@ -10,6 +10,8 @@ This repository contains **3 ready-to-use prompt templates** that help you creat
 2. **Gemini via n8n** - Route AI analysis through your n8n automation workflows
 3. **Generic n8n Webhook** - Connect any n8n workflow to Claude Code as a slash command
 
+![Claude Code Slash Commands](./header.jpg)
+
 ---
 
 ## What Are Slash Commands?
@@ -43,7 +45,13 @@ Use slash commands for repetitive tasks you want to automate.
 
 **Analyze your codebase:**
 ```bash
-/gemini-analyze src/components 2 session1 -- Review the React components for common issues
+# Single directory
+/gemini-analyze src/components 5 session1 -- Review the React components for common issues
+
+# Multiple directories and files
+/gemini-analyze src/components,src/hooks,package.json 5 session1 -- Analyze the architecture
+
+# Follow-up question
 /gemini-ask session1 -- What security concerns do you see?
 ```
 
@@ -87,8 +95,13 @@ That's it. Claude generates the command files and scripts automatically.
 Connects Claude Code directly to Google's Gemini API. Analyze large codebases with AI.
 
 **Creates:**
-- `/gemini-analyze` - Analyze files and store context for follow-up questions
-- `/gemini-ask` - Ask follow-up questions without re-sending files
+- `/gemini-analyze <paths> <depth> <sessionId> -- <prompt>` - Analyze files and store context locally
+- `/gemini-ask <sessionId> -- <prompt>` - Ask follow-up questions without re-sending files
+
+**Features:**
+- Comma-separated paths support: `src/api,src/utils,config.json`
+- Size limits: Warns at 5MB, stops at 10MB
+- Local session storage in `~/.claude/gemini-sessions/`
 
 **You need:**
 - Google Gemini API key (free tier available)
@@ -106,8 +119,14 @@ Connects Claude Code directly to Google's Gemini API. Analyze large codebases wi
 Routes AI analysis through your n8n workflows. Combine AI analysis with automation (Slack notifications, GitHub integration, database storage, etc.).
 
 **Creates:**
-- `/gemini-analyze` - Send files to n8n for AI analysis
-- `/gemini-ask` - Follow-up questions (n8n stores the context)
+- `/gemini-analyze <paths> <depth> <sessionId> -- <prompt>` - Send files to n8n for AI analysis
+- `/gemini-ask <sessionId> -- <prompt>` - Follow-up questions (n8n stores the context)
+
+**Features:**
+- Comma-separated paths: `src/components,src/hooks,config.json`
+- Mixed directories and files: `src/App.tsx,src/components`
+- Size limits: Warns at 5MB, stops at 10MB
+- n8n handles session storage
 
 **You need:**
 - n8n instance (cloud or self-hosted)

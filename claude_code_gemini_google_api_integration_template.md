@@ -17,21 +17,27 @@ Before implementing, research the latest Google Gemini API documentation at http
 
 **1. Create two user-level slash commands** (in `~/.claude/commands/`):
 
-- `/gemini-analyze <directory|pattern> <depth> <sessionId> -- <prompt>`
-  - Collects files from the codebase
-  - Sends to Gemini for analysis
-  - Stores context for follow-ups (if session storage enabled)
+- `/gemini-analyze <paths> <depth> <sessionId> -- <prompt>`
+  - Collects files from the codebase (supports comma-separated paths)
+  - Sends to Google Gemini API directly
+  - Stores context locally for follow-ups
+  - Size limits: Warns at 5MB, stops at 10MB
 
 - `/gemini-ask <sessionId> -- <prompt>`
   - Follow-up questions using stored session context
-  - No need to re-send files
+  - No files re-sent, loads from `~/.claude/gemini-sessions/`
 
 **2. File Collection Features**:
 
-- Support directory paths with depth control: `src/components 2`
-- Support file patterns: `*.ts`, `**/*.tsx`
-- Include these extensions: `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.java`, `.go`, `.rs`, `.c`, `.cpp`, `.h`, `.css`, `.html`, `.md`, `.txt`, `.json`
-- Format as markdown:
+- **Multiple paths**: Comma-separated (NO spaces): `src/components,src/hooks,src/utils`
+- **Mixed inputs**: Directories + specific files: `src/components,src/App.tsx,src/index.ts`
+- **Depth control**: For directories only (1=shallow, 5=medium, 10=deep)
+- **Supported extensions**: `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.java`, `.go`, `.rs`, `.c`, `.cpp`, `.h`, `.hpp`, `.swift`, `.kt`, `.css`, `.scss`, `.html`, `.md`, `.txt`, `.json`, `.yaml`, `.yml`, `.sh`, `.sql`, `.toml`
+- **Size limits**:
+  - Warns at 5MB payload
+  - Hard limit at 10MB
+  - Shows cumulative size during collection
+- **Format as markdown**:
   ```
   ## filename.ts
   ### /full/path/to/filename.ts
@@ -69,12 +75,24 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateCo
 - Store sessions: `~/.claude/gemini-sessions/{sessionId}.md`
 - Include metadata: timestamp, file count, original prompt
 
-**5. Implementation Files**:
+**5. Shell Script Implementation Details**:
+
+The bash scripts should include:
+- Argument parsing with `--` separator support
+- JSON payload construction using `jq` for proper escaping
+- Temp files for large payloads (avoid shell ARG_MAX limits)
+- File size tracking and limits (5MB warning, 10MB hard limit)
+- Color-coded output (success=green, error=red, info=blue)
+- Progress indicators during file collection
+- HTTP response handling (200, 429 rate limit, 413, etc.)
+- Helpful error messages and suggestions
+
+**6. Implementation Files**:
 
 - Commands: `~/.claude/commands/gemini-analyze.md` and `~/.claude/commands/gemini-ask.md`
 - Scripts: `~/.claude/scripts/gemini-analyze.sh` and `~/.claude/scripts/gemini-ask.sh`
 
-**6. User Experience**:
+**7. User Experience**:
 
 - Color-coded output (success/error/info)
 - Progress indicators (collecting files, calling API)
@@ -83,7 +101,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateCo
 - Show API usage/cost information
 - Provide helpful next-step suggestions
 
-**7. Error Handling**:
+**8. Error Handling**:
 
 - Handle API rate limits gracefully
 - Clear error messages for authentication failures
@@ -93,12 +111,30 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateCo
 ## Example Usage
 
 ```bash
-# Analyze React components
-/gemini-analyze src/components 2 react_patterns -- Analyze React component patterns and suggest improvements
+# Analyze single directory
+/gemini-analyze src/components 5 review123 -- Review this code for best practices
 
-# Follow-up questions (reuses context, no files re-sent)
-/gemini-ask react_patterns -- What security vulnerabilities do you see?
-/gemini-ask react_patterns -- How would you refactor the state management?
+# Analyze multiple directories
+/gemini-analyze src/components,src/hooks,src/utils 5 arch_review -- Analyze the architecture
+
+# Mix directories and specific files
+/gemini-analyze src/components,src/App.tsx,src/index.ts 3 mixed_review -- Review this code
+
+# Specific files only
+/gemini-analyze src/App.tsx,src/index.ts,package.json 1 file_review -- Analyze these files
+
+# Follow-up questions (loads from local session storage)
+/gemini-ask review123 -- What security vulnerabilities do you see?
+/gemini-ask review123 -- How would you refactor the state management?
 ```
+
+## Important Notes
+
+**Common Mistakes to Avoid:**
+- ❌ `src/components src/hooks` - Don't use spaces between paths
+- ✅ `src/components,src/hooks` - Use commas without spaces
+- ❌ `"src/**/*.ts"` - No glob patterns needed, script finds files automatically
+- ❌ `"src/*.{ts,tsx}"` - Brace expansion doesn't work
+- ✅ `src` - Just provide the directory
 
 Please implement this integration now, researching the latest API documentation first.
